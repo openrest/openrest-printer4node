@@ -1,6 +1,7 @@
 var openrest = require("openrest");
 var htmlToPdf = require('html-to-pdf');
 var spawn = require('child_process').spawn;
+var fs = require("fs");
 var argv = require('minimist')(process.argv.slice(2));
 
 var INTERVAL = 20000; // Number of ms to poll the server
@@ -138,9 +139,37 @@ function onOrder(order) {
         if (error) {
             console.error('[ERROR] Error converting html to pdf!', error);
         } else {
-            spawn("lp", [filename]);
+            if (argv.bmp) {
+                onPrintBmp(filename);
+            } else {
+                onPrintPdf(filename);
+            }
         }
     });
 };
+
+function onPrintPdf(filename) {
+    spawn("lp", [filename]);
+}
+
+function onPrintBmp(filename) {
+    var gs = spawn("gs", ["-dBATCH", "-dNOPAUSE", "-sDEVICE=bmpgray", "-r300", "-sOutputFile="+filename+"-%03d.bmp", filename]);
+
+    gs.on('close', function (code, signal) {
+        for (var i = 0 ; i < 100 ; i++) {
+            var bmpFilename = filename+"-"+(i < 10 ? "00"+i : "0"+i)+".bmp";
+            if (fs.existsSync(bmpFilename)) {
+                spawn("lp", [bmpFilename]);
+            }
+        }
+    });
+    gs.stdout.on('data', function (data) {
+        console.log('stdout: ' + data);
+    });
+
+    gs.stderr.on('data', function (data) {
+        console.log('stderr: ' + data);
+    });
+}
 
 run();
