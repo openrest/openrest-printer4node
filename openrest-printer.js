@@ -23,6 +23,7 @@ function exitWithError(errorMessage) {
 }
 
 var accessToken = null;
+var roles = null;
 
 // Build the access token based on the arguments given in the command line
 if ((argv.username) && (argv.password)) {
@@ -55,9 +56,40 @@ function onGetRoles(result) {
     }
 
     console.log(" - Roles: ", result.value.roles);
+    roles = result.value.roles;
 
     setInterval(onInterval, INTERVAL);
     onInterval();
+}
+
+function insertRoles(request) {
+    var restaurantIds = [];
+    var chainId = null;
+    var distributorId = null;
+    var admin = false;
+
+    for (var i = 0, l = roles.length ; i < l ; i++) {
+        var role = roles[i];
+
+        switch (role.organizationType) {
+            case "restaurant": restaurantIds.push(role.organizationId); break;
+            case "chain" : chainId = role.organizationId; break
+            case "distributor" : distributorId = role.organizationId; break;
+            case "admin": admin = true; break;
+        }
+    }
+
+    if (admin) {
+        // Nothing to do
+    } else if (distributorId) {
+        request.distributorId = distributorId;
+    } else if (chainId) {
+        request.chainId = chainId;
+    } else if (restaurantIds.length > 0) {
+        request.restaurantIds = restaurantIds;
+    }
+
+
 }
 
 function onInterval() {
@@ -67,10 +99,12 @@ function onInterval() {
     var request = {
         type:"query_orders",
         accessToken:accessToken,
-        distributorId:"us.openrest.com",
         status:"new",
-        fields:["id", "status", "modified", "locale"]
+        fields:["id", "status", "modified", "locale"],
+        viewMode:"restaurant",
     };
+
+    insertRoles(request);
 
     if (!lastOrderSince) {
         request.limit = 10;
