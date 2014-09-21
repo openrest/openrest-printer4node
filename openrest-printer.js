@@ -142,11 +142,17 @@ function onOrders(orders) {
             lastOrderSince = order.modified + 1;
         }
 
-        requests.push({type:"get_order", fields:["id", "restaurantId", "html"],
-                   accessToken:accessToken, orderId:order.id, viewMode:"restaurant",
-                   anonymize:true, printCsc:false, locale:order.locale, printHeader:true,
-                   embed:true, printConfirmation:false 
-        });
+        var req = {type:"get_order", fields:["id", "restaurantId", "html"],
+            accessToken:accessToken, orderId:order.id, viewMode:"restaurant",
+            anonymize:true, printCsc:false, locale:order.locale, printHeader:true,
+            embed:true, printConfirmation:false
+        };
+
+        requests.push(req);
+
+        if (argv.printWidth) {
+            req.viewport = {width:parseInt(argv.printWidth), initialScale:1.0, maximumScale:1.0};
+        }
     }
 
     openrest.request({
